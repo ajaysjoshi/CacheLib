@@ -55,6 +55,18 @@ target_link_libraries(cachelib_navy PUBLIC
   cachelib_common
   )
 
+CHECK_INCLUDE_FILE("linux/blkzoned.h" HAVE_BLKZONED)
+if(HAVE_BLKZONED)
+  include (CheckStructHasMember)
+  CHECK_STRUCT_HAS_MEMBER ("struct blk_zone" capacity linux/blkzoned.h
+             HAVE_BLKZONED_CAPACITY LANGUAGE C)
+  if(NOT HAVE_BLKZONED_CAPACITY)
+    add_compile_definitions(NO_BLOCKZONED)
+  endif()
+else()
+  add_compile_definitions(NO_BLOCKZONED)
+endif()
+
 install(TARGETS cachelib_navy
         EXPORT cachelib-exports
         DESTINATION ${LIB_INSTALL_DIR} )
