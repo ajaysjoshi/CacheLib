@@ -237,6 +237,16 @@ void setupCacheProtos(const navy::NavyConfig& config,
   uint64_t bigHashStartOffset = 0;
 
   XLOG(INFO) << "metadataSize: " << metadataSize;
+
+  if (config.usesZonedFile()) {
+    uint64_t totalMetaZone =
+      metadataSize/getRegionSize(config);
+    if (metadataSize % getRegionSize(config))
+      totalMetaZone++;
+    blockCacheStartOffset =
+      alignUp(totalMetaZone * getRegionSize(config), getRegionSize(config));
+  }
+
   for (size_t idx = 0; idx < config.enginesConfigs().size(); idx++) {
     XLOG(INFO) << "Setting up engine pair " << idx;
     const auto& enginesConfig = config.enginesConfigs()[idx];
@@ -244,6 +254,10 @@ void setupCacheProtos(const navy::NavyConfig& config,
     auto enginePairProto = cachelib::navy::createEnginePairProto();
 
     if (enginesConfig.isBigHashEnabled()) {
+        if (config.usesZonedFile())
+          throw std::invalid_argument{
+           folly::sformat("Big Hash is not supported in zoned drive.")};
+
       uint64_t bigHashSize =
           totalCacheSize * enginesConfig.bigHash().getSizePct() / 100ul;
       bigHashStartOffset = setupBigHash(
@@ -312,8 +326,17 @@ std::unique_ptr<cachelib::navy::Device> createDevice(
     std::shared_ptr<navy::DeviceEncryptor> encryptor) {
   auto blockSize = config.getBlockSize();
   auto maxDeviceWriteSize = config.getDeviceMaxWriteSize();
-
-  if (config.usesRaidFiles()) {
+  if (config.usesZonedFile()) {
+    // Create ZNS device -
+    // No support for big hash yet
+    return cachelib::navy::createZNSDevice(
+        config.getFileName(),
+        config.getFileSize(),
+        getRegionSize(config),
+        blockSize,
+        encryptor,
+        maxDeviceWriteSize > 0 ? alignDown(maxDeviceWriteSize, blockSize) : 0);
+  }else if (config.usesRaidFiles()) {
     auto stripeSize = getRegionSize(config);
     return cachelib::navy::createRAIDDevice(
         config.getRaidPaths(),

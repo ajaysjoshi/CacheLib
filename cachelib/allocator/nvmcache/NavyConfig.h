@@ -460,6 +460,7 @@ class NavyConfig {
 
   bool usesSimpleFile() const noexcept { return !fileName_.empty(); }
   bool usesRaidFiles() const noexcept { return raidPaths_.size() > 0; }
+  bool usesZonedFile() const noexcept { return zonedDevice_; }
   bool isBigHashEnabled() const {
     return enginesConfigs_[0].bigHash().getSizePct() > 0;
   }
@@ -531,6 +532,10 @@ class NavyConfig {
   void setRaidFiles(std::vector<std::string> raidPaths,
                     uint64_t fileSize,
                     bool truncateFile = false);
+  // Set zoned device enabled
+  void setZonedDevice(bool zonedDevice) {
+    zonedDevice_  = zonedDevice;
+  }
   // Set the parameter for a in-memory file.
   // This function is only for cachebench and unit tests to create
   // a MemoryDevice when no file path is set.
@@ -603,6 +608,8 @@ class NavyConfig {
   // The size of the file that Navy should use.
   // 0 means to use the whole device.
   uint64_t fileSize_{};
+  // Zoned device enabler
+  bool zonedDevice_;
   // Whether ask Navy to truncate the file it uses.
   bool truncateFile_{false};
   // This controls granularity of the writes when we flush the region.
